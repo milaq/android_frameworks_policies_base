@@ -126,8 +126,14 @@ class GlobalActions implements DialogInterface.OnDismissListener, DialogInterfac
                 R.string.global_action_silent_mode_off_status) {
 
             void onToggle(boolean on) {
-                mAudioManager.setRingerMode(on ? AudioManager.RINGER_MODE_SILENT
-                        : AudioManager.RINGER_MODE_NORMAL);
+                int vibrateMode = mAudioManager.getVibrateSetting(AudioManager.VIBRATE_TYPE_RINGER);
+                if (vibrateMode == AudioManager.VIBRATE_SETTING_ON) {
+                    mAudioManager.setRingerMode(on ? AudioManager.RINGER_MODE_VIBRATE
+                            : AudioManager.RINGER_MODE_NORMAL);
+                } else {
+                    mAudioManager.setRingerMode(on ? AudioManager.RINGER_MODE_SILENT
+                            : AudioManager.RINGER_MODE_NORMAL);
+                }
             }
 
             public boolean showDuringKeyguard() {
