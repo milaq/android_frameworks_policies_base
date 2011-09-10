@@ -279,6 +279,9 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
     // Behavior of trackball wake
     boolean mTrackballWakeScreen;
+	
+	// Behavior of volume wake
+    boolean mVolumeWakeScreen;
 
     // Behavior of POWER button while in-call and screen on.
     // (See Settings.Secure.INCALL_POWER_BUTTON_BEHAVIOR.)
@@ -317,6 +320,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     Settings.Secure.DEFAULT_INPUT_METHOD), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     "fancy_rotation_anim"), false, this);
+            resolver.registerContentObserver(Settings.System.getUriFor(
+                    Settings.System.VOLUME_WAKE_SCREEN), false, this);
             resolver.registerContentObserver(Settings.System.getUriFor(
                     Settings.System.TRACKBALL_WAKE_SCREEN), false, this);
             updateSettings();
@@ -681,6 +686,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                     "fancy_rotation_anim", 0) != 0 ? 0x80 : 0;
             mTrackballWakeScreen = (Settings.System.getInt(resolver,
                     Settings.System.TRACKBALL_WAKE_SCREEN, 0) == 1);
+            mVolumeWakeScreen = (Settings.System.getInt(resolver,
+                    Settings.System.VOLUME_WAKE_SCREEN, 0) == 1);
             int accelerometerDefault = Settings.System.getInt(resolver,
                     Settings.System.ACCELEROMETER_ROTATION, DEFAULT_ACCELEROMETER_ROTATION);
             if (mAccelerometerDefault != accelerometerDefault) {
@@ -1997,11 +2004,16 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                         (event.type == RawInputEvent.EV_KEY) && (event.value == 0);
                 
                 if (isWakeKey && isKeyDown) {
-
                     // tell the mediator about a wake key, it may decide to
                     // turn on the screen depending on whether the key is
                     // appropriate.
-                    if (!mKeyguardMediator.onWakeKeyWhenKeyguardShowingTq(event.keycode)
+                    //
+                    // pass KeyEvent.KEYCODE_POWER instead of KEYCODE_VOLUME_* if mVolumeWakeScreen is true to the mediator
+                    // TODO has to be revisited in order to handle volume_longpress correctly
+                    int keyVolumeWake = event.keycode;
+                    if ((keyVolumeWake == KeyEvent.KEYCODE_VOLUME_UP || keyVolumeWake == KeyEvent.KEYCODE_VOLUME_DOWN) && mVolumeWakeScreen && !isInCall()) 
+                            keyVolumeWake = KeyEvent.KEYCODE_POWER;
+                    if (!mKeyguardMediator.onWakeKeyWhenKeyguardShowingTq(keyVolumeWake)
                             && (event.keycode == KeyEvent.KEYCODE_VOLUME_DOWN
                                 || event.keycode == KeyEvent.KEYCODE_VOLUME_UP)) {
                         handleVolumeKeyDown(event.keycode);
@@ -2293,6 +2305,10 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         int flags = event.flags;
         if (mTrackballWakeScreen && 
                 (keycode == RawInputEvent.BTN_MOUSE || scancode == RawInputEvent.BTN_MOUSE)) {
+            flags |= WindowManagerPolicy.FLAG_WAKE;
+        }
+	else if (mVolumeWakeScreen && 
+                (keycode == KeyEvent.KEYCODE_VOLUME_UP || scancode == KeyEvent.KEYCODE_VOLUME_UP || keycode == KeyEvent.KEYCODE_VOLUME_DOWN || scancode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
             flags |= WindowManagerPolicy.FLAG_WAKE;
         }
         return (flags
