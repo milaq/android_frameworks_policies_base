@@ -44,6 +44,7 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.provider.Settings;
+import android.preference.MultiSelectListPreference;
 import android.gesture.Gesture;
 import android.gesture.GestureLibraries;
 import android.gesture.GestureLibrary;
@@ -128,6 +129,14 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
          Settings.System.MENU_UNLOCK_SCREEN, 0) == 1);
     private boolean mLockAlwaysBattery = (Settings.System.getInt(mContext.getContentResolver(),
          Settings.System.LOCKSCREEN_ALWAYS_BATTERY, 0) == 1);
+    private boolean mLockCalendarAlarm = (Settings.System.getInt(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_CALENDAR_ALARM, 0) == 1);
+    private String[] mCalendars = MultiSelectListPreference.parseStoredValue(Settings.System.getString(
+            mContext.getContentResolver(), Settings.System.LOCKSCREEN_CALENDARS));
+    private boolean mLockCalendarRemindersOnly = (Settings.System.getInt(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_CALENDAR_REMINDERS_ONLY, 0) == 1);
+    private long mLockCalendarLookahead = Settings.System.getLong(mContext.getContentResolver(),
+            Settings.System.LOCKSCREEN_CALENDAR_LOOKAHEAD, 10800000);
     private boolean mLockMusicControls = (Settings.System.getInt(mContext.getContentResolver(),
          Settings.System.LOCKSCREEN_MUSIC_CONTROLS, 1) == 1);
     private boolean mLockAlwaysMusic = (Settings.System.getInt(mContext.getContentResolver(),
@@ -609,9 +618,17 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
 
     private void refreshAlarmDisplay() {
         mNextAlarm = mLockPatternUtils.getNextAlarm();
+        
         if (mNextAlarm != null) {
             mAlarmIcon = getContext().getResources().getDrawable(R.drawable.ic_lock_idle_alarm);
+        } else if (mLockCalendarAlarm) {
+            mNextAlarm = mLockPatternUtils.getNextCalendarAlarm(mLockCalendarLookahead,
+                    mCalendars, mLockCalendarRemindersOnly);
+            if (mNextAlarm != null) {
+                mAlarmIcon = getContext().getResources().getDrawable(R.drawable.ic_lock_idle_calendar);
+            }        
         }
+
         updateStatusLines();
     }
 
